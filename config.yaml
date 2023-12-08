@@ -42,27 +42,37 @@ SCALE_FACTOR: [1, "rx"]
 SCALE_FACTOR_FILE_RX: ""
 
 # params to run compute matrix (used as input for heatmaps etc)
+# change <name> to meaningful matrix name 
 COMPUT_MATRIX_PARAM:
-  name:
-    type: ""
+  <name>: 
+    type: "scale"
     ref_point: ""
-    region_bed: ""
-    length:
-    up:
-    down:
-    samples: []
+    region_bed: "Ensembl.ensGene.whole.hg19.collapsed.bed"
+    length: 10000
+    up: 2500
+    down: 2500
+    samples: ["", "", ""]
+  <name>: 
+    type: "ref_point"
+    ref_point: "center"
+    region_bed: "Ensembl.ensGene.whole.hg19.collapsed.promoter5kb.bed"
+    length: ""
+    up: 2500
+    down: 2500
+    samples: ["", "", ""]
 
 # params plot heatmap and plot profile. See deeptols for options.
 PLOT_HEATMAP_PARAM:
   name:
     color: "#1e5385,#f8f79d,#cc2200"
     colorLine: 
-    plotType: line
+    plotType: se
     samples: ""
     lables: ""
     startLabel: ""
     endLabel: ""
     title: ""
+    height: 15
     kmeans: 2
 
 PLOT_PROFILE_PARAM:
@@ -71,7 +81,7 @@ PLOT_PROFILE_PARAM:
     startLabel: ""
     endLabel: ""
     title: ""
-    plotType: line
+    plotType: se
     colors:
 
 # samples used when calculating Z-score

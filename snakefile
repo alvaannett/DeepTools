@@ -34,11 +34,11 @@ rule all:
                scal_fact = config["SCALE_FACTOR"],
                bed_region = config["SUMMARY_REGIONS"],
                condition = config["Z_SCORE_PARAM"]["condition"]),
-        expand(config["OUT_PATH"] + "/08_log2fc/{norm_meth}.scale_{scal_fact}.bed_{bed_region}.{condition}.log2fc.tab",
-               norm_meth = config["NORM_METHOD"],
-               scal_fact = config["SCALE_FACTOR"],
-	       bed_region = config["SUMMARY_REGIONS"],
-	       condition = config["LOG2FC_PARAM"]["condition"])
+        #expand(config["OUT_PATH"] + "/08_log2fc/{norm_meth}.scale_{scal_fact}.bed_{bed_region}.{condition}.log2fc.tab",
+        #       norm_meth = config["NORM_METHOD"],
+        #       scal_fact = config["SCALE_FACTOR"],
+	#       bed_region = config["SUMMARY_REGIONS"],
+	#       condition = config["LOG2FC_PARAM"]["condition"])
 
 
 # function to get combinations of samples and names that excist
