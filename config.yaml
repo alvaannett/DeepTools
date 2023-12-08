@@ -1,0 +1,82 @@
+# list of sample names as used by genpipes: ["sample1", "sample2"]
+SAMPLES: []
+
+# list marks as used by genpipes: ["H3K27me3", "H3K27ac"]
+MARKS: []
+
+
+# path to genpipes output folder
+GENPIPES: "/lustre06/project/6004736/alvann/from_narval/220408_SJG2_A29P/ChIP/out/01A_genpipes_chipseq"
+
+# path to output folder
+OUT_PATH: ""
+
+CPU: 10
+CPU_COMPUTE_MATRIX: 10
+
+# path to black list file
+BLACK_LIST: "/lustre06/project/6004736/alvann/from_narval/REFERENCES/annotation_files/ENCODE.blacklist.wgEncodeHg19ConsensusSignalArtifactRegions.hg19.noOverlaps.bed"
+
+# bin size to use for bigwig summary
+BIN_SIZE: [5000]
+
+# bed files used for bigwig summary
+SUMMARY_REGIONS:
+  gene.ens.hg19: "/lustre06/project/6004736/alvann/from_narval/REFERENCES/annotation_files/Ensembl.ensGene.whole.hg19.collapsed.can.bed"
+  promoter5kb.ens.hg 19: "/lustre06/project/6004736/alvann/from_narval/REFERENCES/annotation_files/Ensembl.ensGene.whole.hg19.collapsed.promoter5kb.can.bed"
+  cgi10kb.UCSC.hg19: "/lustre06/project/6004736/alvann/from_narval/REFERENCES/annotation_files/UCSC.regulation.CpGIslands.cpgIslandExt.hg19.10kb.bed"
+
+# PCs to compute
+PC:
+  pc12: [1, 2]
+  pc34: [3, 4]
+
+# normalization method: RPKM, CPM etc (see deeptools for options)
+NORM_METHOD: ["CPM"]
+
+# scale factrs to use (numeric or rx)
+SCALE_FACTOR: [1, "rx"]
+
+# if SCALE_FACTOR = "rx" provide path to csv file with rx scale factors for each sample
+# file needs to have column Sample and column rx
+SCALE_FACTOR_FILE_RX: ""
+
+# params to run compute matrix (used as input for heatmaps etc)
+COMPUT_MATRIX_PARAM:
+  name:
+    type: ""
+    ref_point: ""
+    region_bed: ""
+    length:
+    up:
+    down:
+    samples: []
+
+# params plot heatmap and plot profile. See deeptols for options.
+PLOT_HEATMAP_PARAM:
+  name:
+    color: "#1e5385,#f8f79d,#cc2200"
+    colorLine: 
+    plotType: line
+    samples: ""
+    lables: ""
+    startLabel: ""
+    endLabel: ""
+    title: ""
+    kmeans: 2
+
+PLOT_PROFILE_PARAM:
+  name:
+    lables: ""
+    startLabel: ""
+    endLabel: ""
+    title: ""
+    plotType: line
+    colors:
+
+# samples used when calculating Z-score
+Z_SCORE_PARAM:
+  control: [""]
+  condition:
+    condition1: [""]
+    condition2: [""]

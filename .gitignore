@@ -1,0 +1,5 @@
+scripts/.Rapp*
+scripts/.ipynb_checkpoints
+scripts/.Rhistory
+.snakemake/*
+.ipynb_checkpoints/*
