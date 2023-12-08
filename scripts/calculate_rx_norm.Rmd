@@ -1,0 +1,113 @@
+---
+title: "Calculate Rx Values"
+output:
+  html_document:
+    df_print: paged
+    theme: flatly
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+params:
+  path_genome: NA
+  path_dm: NA
+  path_out: NA
+  prefix: NA
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+notebook_theme = theme(aspect.ratio = 1,
+                       text = element_text(size = 10), 
+                       panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+                       panel.grid.major = element_blank(), 
+                       panel.grid.minor = element_blank(),
+                       panel.background = element_blank(),
+                       axis.line = element_blank(), 
+                       legend.position = "none",
+                       axis.title = element_blank())
+```
+
+
+```{r}
+print(params$path_genome)
+print(params$path_dm) 
+print(params$path_out) 
+print(params$prefix)
+```
+
+```{r}
+s = data.table::fread(params$path_genome)
+rx = data.table::fread(params$path_dm)
+```
+# Sample stats 
+
+```{r}
+s
+```
+# Rx stats
+
+```{r}
+rx
+```
+# Calculate Rx
+
+```{r}
+s = s %>%
+  mutate(genome = `Remaining Reads after Filtering #`)
+
+rx = rx %>%
+  mutate(dm6 = `Remaining Reads after Filtering #`)
+
+input = left_join(s %>% filter(`Mark Name` == 'Input') %>% select(Sample, `Mark Name`, `genome`), 
+	                rx %>% filter(`Mark Name` == 'Input') %>% select(Sample, `Mark Name`, `dm6`)) %>%
+        mutate(genome_proc = 100*(genome/(genome+dm6)),
+               dm6_proc = 100*(dm6/(genome+dm6)))  
+
+norm = left_join(s %>% select(Sample, `Mark Name`, `genome`), 
+                 rx %>% select(Sample, `Mark Name`, `dm6`)) %>% 
+       filter(!`Mark Name` == 'Input') %>%
+       mutate(genome_proc = 100*(genome/(genome+dm6)),
+              dm6_proc = 100*(dm6/(genome+dm6)))  
+
+norm = norm %>% mutate(rx = NA)
+
+for(i in 1:nrow(input)){
+ norm = norm %>% mutate(rx = ifelse(Sample == input[i,]$Sample, (genome_proc/dm6_proc)/(input[i,]$genome_proc/input[i,]$dm6_proc), rx))
+}
+
+norm
+```
+
+```{r}
+norm %>% 
+  pivot_longer(!c(Sample, `Mark Name`, rx, genome, dm6)) %>%
+  ggplot(aes(Sample, value, fill = name)) +
+    geom_bar(stat = 'identity') +
+    scale_fill_manual(values = c('#558C8C', '#E8DB7D')) +
+    facet_wrap(.~`Mark Name`) +
+    theme(strip.background = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+    notebook_theme +
+    scale_y_continuous(limits = c(0, 102), expand = c(0, 0))
+```
+
+```{r}
+norm %>% 
+  pivot_longer(!c(Sample, `Mark Name` , rx, genome, dm6)) %>% 
+  ggplot(aes(Sample, rx)) +
+    geom_bar(stat = 'identity', fill = '#558C8C') +
+    facet_wrap(.~`Mark Name`) +
+    theme(strip.background = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+    notebook_theme +
+    scale_y_continuous(limits = c(0, max(norm$rx) + 0.2), expand = c(0, 0)) 
+```
+
+
+```{r}
+data.table::fwrite(norm, file = paste0(params$path_out, 'rx_norm.', params$prefix, '.txt'))
+```
