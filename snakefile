@@ -1,5 +1,55 @@
 import pandas as pd
 
+# function to get combinations of samples and names that excist
+def get_sample_mark_combo(paths, samples, marks):
+  sample_mark = []
+  for s in samples:
+      for m in marks:
+         for p in paths:
+           bam_path = p + "/alignment/" + s + "/" + m + "/" + s + "." + m + ".sorted.dup.filtered.bam"
+           if os.path.exists(bam_path):
+              sample_mark.append(s + "." + m)
+  return(sample_mark)
+
+# function to return bam path from sample and mark name
+def get_bam_path_from_sample_mark(wildcards):
+  sm = wildcards.sample_mark.split('.')
+  for p in config["GENPIPES"]:
+     path = p + "/alignment/" + sm[0] + "/" + sm[1] + "/" + sm[0] + "." + sm[1] + ".sorted.dup.filtered.bam"
+     return(path)
+
+# function to return bam path from sample and mark name
+def get_bam_path_from_sample_mark_input(wildcards):
+  sm = wildcards.sample_mark.split('.')
+  for p in config["GENPIPES"]:
+     path = p + "/alignment/" + sm[0] + "/Input/" + sm[0] + ".Input.sorted.dup.filtered.bam"
+     return(path)
+
+# function to get sample bw for compute matrix and heatmaps
+def get_bw_samples_for_compute_matrix(wildcards, norm_meth, scal_fact):
+  bw = [config["OUT_PATH"] + "/01_normalize_tracks/" + norm_meth + ".scale_" + scal_fact + "/" + s + "." + norm_meth + ".scale_" + scal_fact + ".bw" for s in config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["samples"]]
+  return bw 
+
+def get_bw_samples_for_compute_matrix_log2(wildcards, norm_meth, scal_fact):
+  bw = [config["OUT_PATH"] + "/01_normalize_tracks_input_log2/" + norm_meth + ".scale_" + scal_fact + "/" + s + "." + norm_meth + ".scale_" + scal_fact + ".bw" for s in config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["samples"]]
+  return bw 
+
+SAMPLE_MARK = get_sample_mark_combo(config["GENPIPES"], config["SAMPLES"], config["MARKS"])
+#print(SAMPLE_MARK)
+
+if(os.path.exists(config['SCALE_FACTOR_FILE_RX'])):
+    rx = pd.read_csv(config['SCALE_FACTOR_FILE_RX'])
+    rx.columns = rx.columns.str.replace(' ', '_')
+else:
+    rx = pd.DataFrame(columns=['Sample', 'Mark_Name', 'rx'])
+
+def get_rx_factor(sample_mark, rx):
+    if not(rx.empty):
+        sample_mark = sample_mark.split('.')
+        return(rx.loc[(rx['Sample'] == sample_mark[0]) & (rx['Mark_Name'] == sample_mark[1]), 'rx'].values[0])
+    else:
+        return(1)
+
 # checks final output files
 rule all:
     input:
@@ -8,8 +58,8 @@ rule all:
                scal_fact = config["SCALE_FACTOR"],
                bin_size = config["BIN_SIZE"]),
         expand(config["OUT_PATH"] + "/03_plot_qc_pca/{norm_meth}.scale_{scal_fact}.bin_{bin_size}.pca_{pc}.pdf",
-	       norm_meth = config["NORM_METHOD"],
-	       scal_fact = config["SCALE_FACTOR"],
+	          norm_meth = config["NORM_METHOD"],
+	          scal_fact = config["SCALE_FACTOR"],
                pc = config["PC"],
                bin_size = config["BIN_SIZE"]),
         expand(config["OUT_PATH"] + "/03_plot_qc_corr/{norm_meth}.scale_{scal_fact}.bed_{bed_region}.correlation.pdf",
@@ -21,66 +71,33 @@ rule all:
                norm_meth = config["NORM_METHOD"],
                scal_fact = config["SCALE_FACTOR"],
                bed_region = config["SUMMARY_REGIONS"]),
-        expand(config["OUT_PATH"] + "/05_plot_heatmap/{norm_meth}.scale_{scal_fact}/{matrix}.pdf",
+        expand(config["OUT_PATH"] + "/05_plot_heatmap/{norm_meth}.scale_{scal_fact}/{matrix}.k{k}.pdf",
                norm_meth = config["NORM_METHOD"],
                scal_fact = config["SCALE_FACTOR"],
-               matrix = config["PLOT_HEATMAP_PARAM"]),
+               matrix = config["PLOT_HEATMAP_PARAM"],
+               k = config["HEATMAP_CLUST"]["k"]),
         expand(config["OUT_PATH"] + "/06_plot_profile/{norm_meth}.scale_{scal_fact}/{matrix}.pdf",
                norm_meth = config["NORM_METHOD"],
                scal_fact = config["SCALE_FACTOR"],
                matrix = config["PLOT_PROFILE_PARAM"]),
+        #expand(config["OUT_PATH"] + "/05_plot_heatmap_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.k{k}.pdf",
+        #       norm_meth = config["NORM_METHOD"],
+        #       scal_fact = config["SCALE_FACTOR"],
+        #       matrix = config["PLOT_HEATMAP_PARAM"],
+        #       k = config["HEATMAP_CLUST"]["k"]),
+        #expand(config["OUT_PATH"] + "/06_plot_profile_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.pdf",
+        #       norm_meth = config["NORM_METHOD"],
+        #       scal_fact = config["SCALE_FACTOR"],
+        #       matrix = config["PLOT_PROFILE_PARAM"]),
         expand(config["OUT_PATH"] + "/07_z_score/{norm_meth}.scale_{scal_fact}.bed_{bed_region}.{condition}.z_score.tab",
                norm_meth = config["NORM_METHOD"],
                scal_fact = config["SCALE_FACTOR"],
                bed_region = config["SUMMARY_REGIONS"],
                condition = config["Z_SCORE_PARAM"]["condition"]),
-        #expand(config["OUT_PATH"] + "/08_log2fc/{norm_meth}.scale_{scal_fact}.bed_{bed_region}.{condition}.log2fc.tab",
+        #expand(config["OUT_PATH"] + "/01_normalize_tracks_input_log2/{norm_meth}.scale_{scal_fact}/{sample_mark}.{norm_meth}.scale_{scal_fact}.bw",
         #       norm_meth = config["NORM_METHOD"],
         #       scal_fact = config["SCALE_FACTOR"],
-	#       bed_region = config["SUMMARY_REGIONS"],
-	#       condition = config["LOG2FC_PARAM"]["condition"])
-
-
-# function to get combinations of samples and names that excist
-def get_sample_mark_combo(paths, samples, marks):
-  sample_mark = []
-  for s in samples:
-      for m in marks:
-         for p in paths:
-           bam_path = p + "/alignment/" + s + "/" + m + "/" + s + "." + m + ".sorted.dup.filtered.bam"
-	   if os.path.exists(bam_path):
-              sample_mark.append(s + "." + m)
-  return(sample_mark)
-
-# function to return bam path from sample and mark name
-def get_bam_path_from_sample_mark(wildcards):
-  sm = wildcards.sample_mark.split('.')
-  for p in config["GENPIPES"]:
-     path = p + "/alignment/" + sm[0] + "/" + sm[1] + "/" + sm[0] + "." + sm[1] + ".sorted.dup.filtered.bam"
-     if os.path.exists(path):
-        return(path)
-
-# function to get sample bw for compute matrix and heatmaps
-def get_bw_samples_for_compute_matrix(wildcards, norm_meth, scal_fact):
-  bw = [config["OUT_PATH"] + "/01_normalize_tracks/" + norm_meth + ".scale_" + scal_fact + "/" + s + "." + norm_meth + ".scale_" + scal_fact + ".bw" for s in config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["samples"]]
-  return bw 
-
-SAMPLE_MARK = get_sample_mark_combo(config["GENPIPES"], config["SAMPLES"], config["MARKS"])
-
-if(os.path.exists(config['SCALE_FACTOR_FILE_RX'])):
-    rx = pd.read_csv(config['SCALE_FACTOR_FILE_RX'])
-    rx.columns = rx.columns.str.replace(' ', '_')
-else:
-    rx = pd.DataFrame(columns=['Sample', 'Mark_Name', 'rx'])
-
-
-def get_rx_factor(sample_mark, rx):
-    if not(rx.empty):
-        sample_mark = sample_mark.split('.')
-        return(rx.loc[(rx['Sample'] == sample_mark[0]) & (rx['Mark_Name'] == sample_mark[1]), 'rx'].values[0])
-    else:
-        return(1)
-
+        #       sample_mark = SAMPLE_MARK)
 
 rule normalize_tracks:
     input:
@@ -128,6 +145,63 @@ rule normalize_tracks:
           --verbose
 
           fi
+        '''
+
+rule normalize_tracks_input:
+    input:
+        bam = get_bam_path_from_sample_mark_input
+    output:
+        bw = config["OUT_PATH"] + "/01_normalize_tracks_input/CPM.scale_1/{sample_mark}.CPM.scale_1.bw"
+    params:
+        rx_factor = lambda wildcards: get_rx_factor(wildcards.sample_mark, rx)
+    threads: config["CPU"]
+    resources:
+        mem_mb=config["CPU"]*5000
+    shell:
+        '''
+        module load mugqic/deepTools/3.3.1
+        module load mugqic/python/2.7.14
+
+         bamCoverage \
+          --bam {input.bam} \
+          --outFileName {output.bw} \
+          --outFileFormat bigwig \
+          --binSize 10 \
+          --normalizeUsing CPM \
+          --scaleFactor 1 \
+          --numberOfProcessors {config[CPU]} \
+          --minMappingQuality 30 \
+          --extendReads \
+          --verbose
+        '''
+
+rule normalize_tracks_input_log2:
+    input:
+        bw = config["OUT_PATH"] + "/01_normalize_tracks/{norm_meth}.scale_{scal_fact}/{sample_mark}.{norm_meth}.scale_{scal_fact}.bw",
+        bw_input = config["OUT_PATH"] + "/01_normalize_tracks_input/CPM.scale_1/{sample_mark}.CPM.scale_1.bw" 
+    output:
+        bw_log2 = config["OUT_PATH"] + "/01_normalize_tracks_input_log2/{norm_meth}.scale_{scal_fact}/{sample_mark}.{norm_meth}.scale_{scal_fact}.bw"
+    params:
+        rx_factor = lambda wildcards: get_rx_factor(wildcards.sample_mark, rx)
+    threads: config["CPU"]
+    resources:
+        mem_mb=config["CPU"]*5000
+    shell:
+        '''
+        module load mugqic/deepTools/3.3.1
+        module load mugqic/python/2.7.14
+        
+        bigwigCompare \
+         -b1 {input.bw} \
+         -b2 {input.bw_input} \
+         -o  {output.bw_log2} \
+         -of bigwig \
+         --binSize 10 \
+         --pseudocount 1 \
+         --operation log2 \
+         --numberOfProcessors {config[CPU]} \
+         --verbose 
+        
         '''
 
 # takes big wig tracks and computes average scores in genomic bins
@@ -338,20 +412,115 @@ rule compute_matrix:
         fi
         '''
 
+rule compute_matrix_input_log2:
+    input:
+        bw = lambda wildcards: get_bw_samples_for_compute_matrix_log2(wildcards, norm_meth = wildcards.norm_meth, scal_fact = wildcards.scal_fact)
+    output:
+        matrix = config["OUT_PATH"] + "/04_compute_matrix_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.gzip"
+    params:
+        type = lambda wildcards: config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["type"],
+        region_bed = lambda wildcards: config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["region_bed"],
+        length = lambda wildcards: config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["length"],
+        up = lambda wildcards: config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["up"],
+        down = lambda wildcards: config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["down"],
+        ref_point = lambda wildcards: config["COMPUT_MATRIX_PARAM"][wildcards.matrix]["ref_point"]
+    resources:
+        mem_mb = config["CPU_COMPUTE_MATRIX"]*5000
+    threads: config["CPU_COMPUTE_MATRIX"]
+    shell:
+        '''
+        module load mugqic/deepTools/3.3.1
+        module load mugqic/python/2.7.14
+
+        TYPE="{params.type}"
+        MATCH1="scale"
+        MATCH2="ref_point"
+
+        if [ "$TYPE" == "$MATCH1" ]; then
+
+        computeMatrix scale-regions \
+         --scoreFileName {input.bw} \
+         --regionsFileName {params.region_bed} \
+         --outFileName {output.matrix} \
+         --regionBodyLength {params.length} \
+         --upstream {params.up}  \
+         --downstream {params.down} \
+         --numberOfProcessors {config[CPU_COMPUTE_MATRIX]} \
+         --skipZeros
+
+        elif [ "$TYPE" == "$MATCH2" ]; then
+
+        computeMatrix reference-point \
+         --scoreFileName {input.bw} \
+         --regionsFileName {params.region_bed} \
+         --outFileName {output.matrix} \
+         --referencePoint "{params.ref_point}" \
+         --beforeRegionStartLength {params.up}  \
+         --afterRegionStartLength {params.down} \
+         --numberOfProcessors {config[CPU_COMPUTE_MATRIX]} \
+         --skipZeros \
+         --missingDataAsZero 
+        fi
+        '''
 
 rule plot_heatmap:
     input:
         matrix = config["OUT_PATH"] + "/04_compute_matrix/{norm_meth}.scale_{scal_fact}/{matrix}.gzip"
     output:
-        heatmap = config["OUT_PATH"] + "/05_plot_heatmap/{norm_meth}.scale_{scal_fact}/{matrix}.pdf"
+        heatmap = config["OUT_PATH"] + "/05_plot_heatmap/{norm_meth}.scale_{scal_fact}/{matrix}.k{k}.pdf"
     params:
         color = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["color"],
         lables = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["lables"],
         startLabel = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["startLabel"],
         endLabel = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["startLabel"],
-	title = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["title"],
+	    title = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["title"],
         plotType = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["plotType"],
-	k = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["k"],
+	    k = lambda wildcards: wildcards.k,
+        height = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["height"],
+        sortUsingSamples = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["sortUsingSamples"],
+        zMax = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["zMax"]
+    threads: config["CPU"]/2
+    resources:
+        mem_mb=2000*5
+    shell:
+        '''
+        module load mugqic/deepTools/3.3.1
+        module load mugqic/python/2.7.14
+        
+        plotHeatmap \
+         --matrixFile {input.matrix} \
+         --outFileName {output.heatmap} \
+         --plotTitle "{params.title}" \
+         --samplesLabel {params.lables} \
+         --colorList "{params.color}" \
+         --colorNumber 100 \
+         --startLabel "{params.startLabel}" \
+         --endLabel "{params.endLabel}" \
+         --plotType "{params.plotType}" \
+         --yMin 0 \
+         --zMin 0 \
+         --zMax {params.zMax} \
+         --sortUsingSamples {params.sortUsingSamples} \
+         --sortUsing mean \
+         --averageTypeSummaryPlot mean \
+         --heatmapHeight {params.height} \
+         --heatmapWidth 3 \
+         --kmeans {params.k}
+         '''
+
+rule plot_heatmap_input_log2:
+    input:
+        matrix = config["OUT_PATH"] + "/04_compute_matrix_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.gzip"
+    output:
+        heatmap = config["OUT_PATH"] + "/05_plot_heatmap_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.k{k}.pdf"
+    params:
+        color = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["color"],
+        lables = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["lables"],
+        startLabel = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["startLabel"],
+        endLabel = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["startLabel"],
+        title = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["title"],
+        plotType = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["plotType"],
+        k = lambda wildcards: wildcards.k,
         height = lambda wildcards: config["PLOT_HEATMAP_PARAM"][wildcards.matrix]["height"]
     threads: config["CPU"]/2
     resources:
@@ -372,6 +541,8 @@ rule plot_heatmap:
          --endLabel "{params.endLabel}" \
          --plotType "{params.plotType}" \
          --heatmapHeight {params.height} \
+         --yMin 0 \
+         --zMin 0 \
          --heatmapWidth 3 \
          --kmeans {params.k}
          '''
@@ -407,9 +578,46 @@ rule plot_profile:
         --colors {params.colors} \
         --averageType mean \
         --perGroup \
+        --yMin 0 \
 	    --plotWidth 10 \
 	    --plotHeight 10 
       '''
+
+rule plot_profile_input_log2:
+    input:
+        matrix = config["OUT_PATH"] + "/04_compute_matrix_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.gzip"
+    output:
+       profile = config["OUT_PATH"] + "/06_plot_profile_input_log2/{norm_meth}.scale_{scal_fact}/{matrix}.pdf"
+    params:
+       lables = lambda wildcards: config["PLOT_PROFILE_PARAM"][wildcards.matrix]["lables"],
+       startLabel = lambda wildcards: config["PLOT_PROFILE_PARAM"][wildcards.matrix]["startLabel"],
+       endLabel = lambda wildcards: config["PLOT_PROFILE_PARAM"][wildcards.matrix]["startLabel"],
+       title = lambda wildcards: config["PLOT_PROFILE_PARAM"][wildcards.matrix]["title"],
+       plotType = lambda wildcards: config["PLOT_PROFILE_PARAM"][wildcards.matrix]["plotType"],
+       colors = lambda wildcards: config["PLOT_PROFILE_PARAM"][wildcards.matrix]["colors"]
+    threads: config["CPU"]
+    resources:
+       mem_mb=config["CPU"]*15000
+    shell:
+       '''
+       module load mugqic/deepTools/3.3.1
+       module load mugqic/python/2.7.14
+
+       plotProfile \
+        --matrixFile {input.matrix} \
+        --outFileName {output.profile} \
+        --samplesLabel {params.lables} \
+        --startLabel "{params.startLabel}" \
+        --endLabel "{params.endLabel}" \
+        --plotTitle "{params.title}" \
+        --plotType "{params.plotType}" \
+        --colors {params.colors} \
+        --yMin 0 \
+        --averageType mean \
+        --perGroup \
+        --plotWidth 10 \
+        --plotHeight 10 
+       '''
 
 rule calculate_z_score_bed:
   input:
